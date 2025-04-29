@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioTrack - Sistema de Gestão Ambiental</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        .sidebar {
+            transition: all 0.3s;
+        }
+        .sidebar-collapsed {
+            width: 70px;
+        }
+        .sidebar-expanded {
+            width: 250px;
+        }
+        .main-content {
+            transition: all 0.3s;
+        }
+        .content-collapsed {
+            margin-left: 70px;
+        }
+        .content-expanded {
+            margin-left: 250px;
+        }
+        .nav-item {
+            transition: all 0.2s;
+        }
+        .nav-item:hover {
+            background-color: #f0fdf4;
+        }
+        .active-nav {
+            background-color: #dcfce7;
+            border-left: 4px solid #10b981;
+        }
+        .map-container {
+            height: 500px;
+            width: 100%;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 200px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            right: 0;
+            border-radius: 0.375rem;
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e5e7eb;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            background-color: #10b981;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar sidebar-expanded fixed inset-y-0 left-0 bg-white shadow-lg overflow-y-auto z-50">
+        <div class="flex items-center justify-between p-4 border-b">
+            <div class="flex items-center">
+                <img src="http://ecobrasil.bio.br/wp-content/uploads/2017/02/Logo-Retina-a.png" alt="Logo" class="h-10">
+                <span class="ml-2 text-lg font-semibold">BioTrack</span>
+            </div>
+            <button id="sidebarToggle" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        <div class="p-4">
+            <div class="flex items-center mb-4">
+                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <i class="fas fa-user text-green-600"></i>
+                </div>
+                <div class="ml-3">
+                    <div class="font-medium" id="userName">Admin</div>
+                    <div class="text-xs text-gray-500">Administrador</div>
+                </div>
+            </div>
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Menu Principal</div>
+                <ul>
+                    <li class="nav-item active-nav mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('dashboard')">
+                            <i class="fas fa-tachometer-alt w-6 text-center"></i>
+                            <span class="ml-3">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('empreendimentos')">
+                            <i class="fas fa-building w-6 text-center"></i>
+                            <span class="ml-3">Empreendimentos</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('fauna')">
+                            <i class="fas fa-dove w-6 text-center"></i>
+                            <span class="ml-3">Fauna</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('flora')">
+                            <i class="fas fa-leaf w-6 text-center"></i>
+                            <span class="ml-3">Flora</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('mapa')">
+                            <i class="fas fa-map-marked-alt w-6 text-center"></i>
+                            <span class="ml-3">Mapa de Espécies</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('monitoramento')">
+                            <i class="fas fa-flask w-6 text-center"></i>
+                            <span class="ml-3">Monitoramento</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('relatorios')">
+                            <i class="fas fa-file-alt w-6 text-center"></i>
+                            <span class="ml-3">Relatórios</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('usuarios')">
+                            <i class="fas fa-users w-6 text-center"></i>
+                            <span class="ml-3">Usuários</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('demandas')">
+                            <i class="fas fa-tasks w-6 text-center"></i>
+                            <span class="ml-3">Demandas</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Módulos Especiais</div>
+                <ul>
+                    <li class="nav-item mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('financeiro')">
+                            <i class="fas fa-money-bill-wave w-6 text-center"></i>
+                            <span class="ml-3">Financeiro</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('socioeconomia')">
+                            <i class="fas fa-handshake w-6 text-center"></i>
+                            <span class="ml-3">Socioeconomia</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('logistica')">
+                            <i class="fas fa-truck w-6 text-center"></i>
+                            <span class="ml-3">Logística</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mb-1 rounded">
+                        <a href="#" class="flex items-center p-2 text-gray-700" onclick="showTab('rh')">
+                            <i class="fas fa-user-tie w-6 text-center"></i>
+                            <span class="ml-3">Recursos Humanos</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="main-content content-expanded">
+        <!-- Top Navigation -->
+        <nav class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="text-lg font-semibold text-gray-900" id="currentTabTitle">Dashboard</div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="relative dropdown">
+                            <button class="flex items-center text-sm rounded-full focus:outline-none">
+                                <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                    <i class="fas fa-user text-green-600"></i>
+                                </div>
+                                <span class="ml-2 mr-1 hidden md:inline">Admin</span>
+                                <i class="fas fa-chevron-down text-xs ml-1"></i>
+                            </button>
+                            <div class="dropdown-content mt-2 py-1">
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Meu Perfil</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Configurações</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onclick="logout()">Sair</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Dashboard Content -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <!-- Dashboard Tab -->
+            <div id="dashboard" class="tab-content active">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
+                    <p class="text-gray-600">Visão geral do sistema BioTrack</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600">
+                                <i class="fas fa-building text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-sm font-medium text-gray-500">Empreendimentos</h3>
+                                <p class="text-2xl font-semibold text-gray-900" id="empreendimentosCount">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                                <i class="fas fa-dove text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-sm font-medium text-gray-500">Registros de Fauna</h3>
+                                <p class="text-2xl font-semibold text-gray-900" id="faunaCount">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                                <i class="fas fa-leaf text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-sm font-medium text-gray-500">Registros de Flora</h3>
+                                <p class="text-2xl font-semibold text-gray-900" id="floraCount">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-red-100 text-red-600">
+                                <i class="fas fa-tasks text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-sm font-medium text-gray-500">Demandas Ativas</h3>
+                                <p class="text-2xl font-semibold text-gray-900" id="demandasCount">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Últimos Empreendimentos</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Processo</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200" id="lastEmpreendimentos">
+                                    <!-- Filled by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Demandas por Status</h3>
+                        <div class="h-64" id="demandasChart">
+                            <!-- Chart will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Atividades Recentes</h3>
+                    <div class="space-y-4" id="recentActivities">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empreendimentos Tab -->
+            <div id="empreendimentos" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Empreendimentos</h2>
+                    <p class="text-gray-600">Cadastro e gestão de empreendimentos ambientais</p>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg mb-6">
+                    <div class="p-4 border-b">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-medium text-gray-900">Cadastrar Novo Empreendimento</h3>
+                            <button id="toggleEmpreendimentoForm" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="empreendimentoForm" class="p-4 border-b">
+                        <form id="formEmpreendimento" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="empreendimentoNome" class="block text-sm font-medium text-gray-700">Nome do Empreendimento *</label>
+                                    <input type="text" id="empreendimentoNome" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                </div>
+                                <div>
+                                    <label for="empreendimentoNumeroProcesso" class="block text-sm font-medium text-gray-700">Número do Processo *</label>
+                                    <input type="text" id="empreendimentoNumeroProcesso" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                </div>
+                                <div>
+                                    <label for="empreendimentoOrgaoLicenciador" class="block text-sm font-medium text-gray-700">Órgão Licenciador *</label>
+                                    <select id="empreendimentoOrgaoLicenciador" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                        <option value="">Selecione</option>
+                                        <option value="IBAMA">IBAMA</option>
+                                        <option value="ICMBio">ICMBio</option>
+                                        <option value="INEA">INEA</option>
+                                        <option value="FEAM">FEAM</option>
+                                        <option value="Outro">Outro</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="empreendimentoResponsavel" class="block text-sm font-medium text-gray-700">Responsável Técnico *</label>
+                                    <input type="text" id="empreendimentoResponsavel" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Licenças</label>
+                                    <div class="mt-2 space-y-2">
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="empreendimentoLP" class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+                                            <label for="empreendimentoLP" class="ml-2 block text-sm text-gray-700">LP (Licença Prévia)</label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="empreendimentoLI" class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+                                            <label for="empreendimentoLI" class="ml-2 block text-sm text-gray-700">LI (Licença de Instalação)</label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="checkbox" id="empreendimentoLO" class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+                                            <label for="empreendimentoLO" class="ml-2 block text-sm text-gray-700">LO (Licença de Operação)</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="empreendimentoValidadeLP" class="block text-sm font-medium text-gray-700">Validade LP</label>
+                                    <input type="date" id="empreendimentoValidadeLP" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                </div>
+                                <div>
+                                    <label for="empreendimentoValidadeLI" class="block text-sm font-medium text-gray-700">Validade LI</label>
+                                    <input type="date" id="empreendimentoValidadeLI" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label for="empreendimentoCondicionantes" class="block text-sm font-medium text-gray-700">Condicionantes Ambientais</label>
+                                <textarea id="empreendimentoCondicionantes" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500"></textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Documentos Comprobatórios</label>
+                                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                                    <div class="space-y-1 text-center">
+                                        <div class="flex text-sm text-gray-600">
+                                            <label for="empreendimentoDocumentos" class="relative cursor-pointer bg-white rounded-md font-medium text-green-600 hover:text-green-500 focus-within:outline-none">
+                                                <span>Enviar arquivos</span>
+                                                <input id="empreendimentoDocumentos" name="empreendimentoDocumentos" type="file" multiple class="sr-only">
+                                            </label>
+                                            <p class="pl-1">ou arraste e solte</p>
+                                        </div>
+                                        <p class="text-xs text-gray-500">PDF, DOC, XLS até 10MB</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-end space-x-3">
+                                <button type="button" onclick="resetEmpreendimentoForm()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    Limpar
+                                </button>
+                                <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    Salvar Empreendimento
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">Lista de Empreendimentos</h3>
+                            <div class="flex space-x-2">
+                                <input type="text" id="empreendimentoSearch" placeholder="Buscar..." class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                                <button onclick="exportEmpreendimentos()" class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                    <i class="fas fa-file-export"></i> Exportar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Processo</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Órgão</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Licenças</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="empreendimentosTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fauna Tab -->
+            <div id="fauna" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Registros de Fauna</h2>
+                    <p class="text-gray-600">Cadastro e gestão de ocorrências de fauna</p>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg mb-6">
+                    <div class="p-4 border-b">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-medium text-gray-900">Novo Registro de Fauna</h3>
+                            <button id="toggleFaunaForm" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="faunaForm" class="p-4 border-b">
+                        <form id="formFauna" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="faunaEmpreendimento" class="block text-sm font-medium text-gray-700">Empreendimento *</label>
+                                    <select id="faunaEmpreendimento" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                        <option value="">Selecione</option>
+                                        <!-- Filled by JavaScript -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="faunaGrupo" class="block text-sm font-medium text-gray-700">Grupo Taxonômico *</label>
+                                    <select id="faunaGrupo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                        <option value="">Selecione</option>
+                                        <option value="Aves">Aves</option>
+                                        <option value="Mamíferos">Mamíferos</option>
+                                        <option value="Répteis">Répteis</option>
+                                        <option value="Anfíbios">Anfíbios</option>
+                                        <option value="Peixes">Peixes</option>
+                                        <option value="Invertebrados">Invertebrados</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="faunaNomeComum" class="block text-sm font-medium text-gray-700">Nome Comum *</label>
+                                    <input type="text" id="faunaNomeComum" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                </div>
+                                <div>
+                                    <label for="faunaNomeCientifico" class="block text-sm font-medium text-gray-700">Nome Científico</label>
+                                    <input type="text" id="faunaNomeCientifico" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                </div>
+                                <div>
+                                    <label for="faunaDataRegistro" class="block text-sm font-medium text-gray-700">Data do Registro *</label>
+                                    <input type="date" id="faunaDataRegistro" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                </div>
+                                <div>
+                                    <label for="faunaResponsavel" class="block text-sm font-medium text-gray-700">Responsável pelo Registro *</label>
+                                    <input type="text" id="faunaResponsavel" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="faunaLatitude" class="block text-sm font-medium text-gray-700">Latitude</label>
+                                    <input type="text" id="faunaLatitude" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                </div>
+                                <div>
+                                    <label for="faunaLongitude" class="block text-sm font-medium text-gray-700">Longitude</label>
+                                    <input type="text" id="faunaLongitude" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label for="faunaObservacoes" class="block text-sm font-medium text-gray-700">Observações</label>
+                                <textarea id="faunaObservacoes" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500"></textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Evidências Fotográficas</label>
+                                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                                    <div class="space-y-1 text-center">
+                                        <div class="flex text-sm text-gray-600">
+                                            <label for="faunaFotos" class="relative cursor-pointer bg-white rounded-md font-medium text-green-600 hover:text-green-500 focus-within:outline-none">
+                                                <span>Enviar fotos</span>
+                                                <input id="faunaFotos" name="faunaFotos" type="file" multiple accept="image/*" class="sr-only">
+                                            </label>
+                                            <p class="pl-1">ou arraste e solte</p>
+                                        </div>
+                                        <p class="text-xs text-gray-500">JPG, PNG até 5MB cada</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-end space-x-3">
+                                <button type="button" onclick="resetFaunaForm()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    Limpar
+                                </button>
+                                <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    Salvar Registro
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">Registros de Fauna</h3>
+                            <div class="flex space-x-2">
+                                <select id="faunaFilterEmpreendimento" class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                                    <option value="">Todos Empreendimentos</option>
+                                    <!-- Filled by JavaScript -->
+                                </select>
+                                <select id="faunaFilterGrupo" class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                                    <option value="">Todos Grupos</option>
+                                    <option value="Aves">Aves</option>
+                                    <option value="Mamíferos">Mamíferos</option>
+                                    <option value="Répteis">Répteis</option>
+                                    <option value="Anfíbios">Anfíbios</option>
+                                    <option value="Peixes">Peixes</option>
+                                    <option value="Invertebrados">Invertebrados</option>
+                                </select>
+                                <input type="text" id="faunaSearch" placeholder="Buscar..." class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                                <button onclick="exportFauna()" class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                    <i class="fas fa-file-export"></i> Exportar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empreendimento</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grupo</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome Comum</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome Científico</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="faunaTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flora Tab -->
+            <div id="flora" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Registros de Flora</h2>
+                    <p class="text-gray-600">Cadastro e gestão de ocorrências de flora</p>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg mb-6">
+                    <div class="p-4 border-b">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-medium text-gray-900">Novo Registro de Flora</h3>
+                            <button id="toggleFloraForm" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="floraForm" class="p-4 border-b">
+                        <form id="formFlora" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="floraEmpreendimento" class="block text-sm font-medium text-gray-700">Empreendimento *</label>
+                                    <select id="floraEmpreendimento" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                        <option value="">Selecione</option>
+                                        <!-- Filled by JavaScript -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="floraFamilia" class="block text-sm font-medium text-gray-700">Família *</label>
+                                    <input type="text" id="floraFamilia" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                </div>
+                                <div>
+                                    <label for="floraNomeComum" class="block text-sm font-medium text-gray-700">Nome Comum</label>
+                                    <input type="text" id="floraNomeComum" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                </div>
+                                <div>
+                                    <label for="floraNomeCientifico" class="block text-sm font-medium text-gray-700">Nome Científico *</label>
+                                    <input type="text" id="floraNomeCientifico" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                </div>
+                                <div>
+                                    <label for="floraDataRegistro" class="block text-sm font-medium text-gray-700">Data do Registro *</label>
+                                    <input type="date" id="floraDataRegistro" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                </div>
+                                <div>
+                                    <label for="floraResponsavel" class="block text-sm font-medium text-gray-700">Responsável pelo Registro *</label>
+                                    <input type="text" id="floraResponsavel" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="floraLatitude" class="block text-sm font-medium text-gray-700">Latitude</label>
+                                    <input type="text" id="floraLatitude" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                </div>
+                                <div>
+                                    <label for="floraLongitude" class="block text-sm font-medium text-gray-700">Longitude</label>
+                                    <input type="text" id="floraLongitude" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label for="floraObservacoes" class="block text-sm font-medium text-gray-700">Observações</label>
+                                <textarea id="floraObservacoes" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500"></textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Evidências Fotográficas</label>
+                                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                                    <div class="space-y-1 text-center">
+                                        <div class="flex text-sm text-gray-600">
+                                            <label for="floraFotos" class="relative cursor-pointer bg-white rounded-md font-medium text-green-600 hover:text-green-500 focus-within:outline-none">
+                                                <span>Enviar fotos</span>
+                                                <input id="floraFotos" name="floraFotos" type="file" multiple accept="image/*" class="sr-only">
+                                            </label>
+                                            <p class="pl-1">ou arraste e solte</p>
+                                        </div>
+                                        <p class="text-xs text-gray-500">JPG, PNG até 5MB cada</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-end space-x-3">
+                                <button type="button" onclick="resetFloraForm()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    Limpar
+                                </button>
+                                <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    Salvar Registro
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">Registros de Flora</h3>
+                            <div class="flex space-x-2">
+                                <select id="floraFilterEmpreendimento" class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                                    <option value="">Todos Empreendimentos</option>
+                                    <!-- Filled by JavaScript -->
+                                </select>
+                                <input type="text" id="floraSearch" placeholder="Buscar..." class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                                <button onclick="exportFlora()" class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                    <i class="fas fa-file-export"></i> Exportar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empreendimento</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Família</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome Científico</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome Comum</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="floraTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mapa de Espécies Tab -->
+            <div id="mapa" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Mapa de Espécies</h2>
+                    <p class="text-gray-600">Visualização georreferenciada de registros de fauna e flora</p>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg mb-6">
+                    <div class="p-4 border-b">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-medium text-gray-900">Filtros do Mapa</h3>
+                        </div>
+                    </div>
+                    <div class="p-4 border-b">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label for="mapaEmpreendimento" class="block text-sm font-medium text-gray-700">Empreendimento</label>
+                                <select id="mapaEmpreendimento" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    <option value="">Todos</option>
+                                    <!-- Filled by JavaScript -->
+                                </select>
+                            </div>
+                            <div>
+                                <label for="mapaTipo" class="block text-sm font-medium text-gray-700">Tipo</label>
+                                <select id="mapaTipo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    <option value="">Todos</option>
+                                    <option value="fauna">Fauna</option>
+                                    <option value="flora">Flora</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="mapaGrupo" class="block text-sm font-medium text-gray-700">Grupo (Fauna)</label>
+                                <select id="mapaGrupo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    <option value="">Todos</option>
+                                    <option value="Aves">Aves</option>
+                                    <option value="Mamíferos">Mamíferos</option>
+                                    <option value="Répteis">Répteis</option>
+                                    <option value="Anfíbios">Anfíbios</option>
+                                    <option value="Peixes">Peixes</option>
+                                    <option value="Invertebrados">Invertebrados</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="mapaFamilia" class="block text-sm font-medium text-gray-700">Família (Flora)</label>
+                                <input type="text" id="mapaFamilia" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                            </div>
+                        </div>
+                        <div class="mt-4 flex justify-end">
+                            <button onclick="applyMapFilters()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                Aplicar Filtros
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="map-container" id="speciesMap"></div>
+                </div>
+                
+                <div class="mt-6 bg-white shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Registros no Mapa</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empreendimento</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coordenadas</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="mapaTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monitoramento Tab -->
+            <div id="monitoramento" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Monitoramento Ambiental</h2>
+                    <p class="text-gray-600">Registro e acompanhamento de parâmetros ambientais</p>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg mb-6">
+                    <div class="p-4 border-b">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-medium text-gray-900">Novo Registro de Monitoramento</h3>
+                            <button id="toggleMonitoramentoForm" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="monitoramentoForm" class="p-4 border-b">
+                        <form id="formMonitoramento" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="monitoramentoEmpreendimento" class="block text-sm font-medium text-gray-700">Empreendimento *</label>
+                                    <select id="monitoramentoEmpreendimento" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                        <option value="">Selecione</option>
+                                        <!-- Filled by JavaScript -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="monitoramentoTipo" class="block text-sm font-medium text-gray-700">Tipo de Monitoramento *</label>
+                                    <select id="monitoramentoTipo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                        <option value="">Selecione</option>
+                                        <option value="Água">Água</option>
+                                        <option value="Solo">Solo</option>
+                                        <option value="Vegetação">Vegetação</option>
+                                        <option value="Ruído">Ruído</option>
+                                        <option value="Ar">Qualidade do Ar</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="monitoramentoData" class="block text-sm font-medium text-gray-700">Data do Monitoramento *</label>
+                                    <input type="date" id="monitoramentoData" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                </div>
+                                <div>
+                                    <label for="monitoramentoResponsavel" class="block text-sm font-medium text-gray-700">Responsável *</label>
+                                    <input type="text" id="monitoramentoResponsavel" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                </div>
+                            </div>
+                            
+                            <div id="monitoramentoAguaFields" class="hidden">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label for="monitoramentoPh" class="block text-sm font-medium text-gray-700">pH</label>
+                                        <input type="number" step="0.1" id="monitoramentoPh" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    </div>
+                                    <div>
+                                        <label for="monitoramentoTurbidez" class="block text-sm font-medium text-gray-700">Turbidez (NTU)</label>
+                                        <input type="number" step="0.1" id="monitoramentoTurbidez" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    </div>
+                                    <div>
+                                        <label for="monitoramentoOxigenio" class="block text-sm font-medium text-gray-700">Oxigênio Dissolvido (mg/L)</label>
+                                        <input type="number" step="0.1" id="monitoramentoOxigenio" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    </div>
+                                    <div>
+                                        <label for="monitoramentoCondutividade" class="block text-sm font-medium text-gray-700">Condutividade (µS/cm)</label>
+                                        <input type="number" step="0.1" id="monitoramentoCondutividade" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    </div>
+                                    <div>
+                                        <label for="monitoramentoTemperatura" class="block text-sm font-medium text-gray-700">Temperatura (°C)</label>
+                                        <input type="number" step="0.1" id="monitoramentoTemperatura" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="monitoramentoSoloFields" class="hidden">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label for="monitoramentoPhSolo" class="block text-sm font-medium text-gray-700">pH do Solo</label>
+                                        <input type="number" step="0.1" id="monitoramentoPhSolo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    </div>
+                                    <div>
+                                        <label for="monitoramentoMateriaOrganica" class="block text-sm font-medium text-gray-700">Matéria Orgânica (%)</label>
+                                        <input type="number" step="0.1" id="monitoramentoMateriaOrganica" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    </div>
+                                    <div>
+                                        <label for="monitoramentoTextura" class="block text-sm font-medium text-gray-700">Textura</label>
+                                        <select id="monitoramentoTextura" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                            <option value="">Selecione</option>
+                                            <option value="Argiloso">Argiloso</option>
+                                            <option value="Arenoso">Arenoso</option>
+                                            <option value="Siltoso">Siltoso</option>
+                                            <option value="Misto">Misto</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="monitoramentoVegetacaoFields" class="hidden">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label for="monitoramentoCobertura" class="block text-sm font-medium text-gray-700">Cobertura Vegetal (%)</label>
+                                        <input type="number" step="1" id="monitoramentoCobertura" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    </div>
+                                    <div>
+                                        <label for="monitoramentoEspecies" class="block text-sm font-medium text-gray-700">Nº de Espécies</label>
+                                        <input type="number" step="1" id="monitoramentoEspecies" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    </div>
+                                    <div>
+                                        <label for="monitoramentoDiversidade" class="block text-sm font-medium text-gray-700">Índice de Diversidade</label>
+                                        <input type="number" step="0.1" id="monitoramentoDiversidade" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label for="monitoramentoObservacoes" class="block text-sm font-medium text-gray-700">Observações</label>
+                                <textarea id="monitoramentoObservacoes" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500"></textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Anexos</label>
+                                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                                    <div class="space-y-1 text-center">
+                                        <div class="flex text-sm text-gray-600">
+                                            <label for="monitoramentoAnexos" class="relative cursor-pointer bg-white rounded-md font-medium text-green-600 hover:text-green-500 focus-within:outline-none">
+                                                <span>Enviar arquivos</span>
+                                                <input id="monitoramentoAnexos" name="monitoramentoAnexos" type="file" multiple class="sr-only">
+                                            </label>
+                                            <p class="pl-1">ou arraste e solte</p>
+                                        </div>
+                                        <p class="text-xs text-gray-500">PDF, DOC, XLS, JPG, PNG até 10MB cada</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-end space-x-3">
+                                <button type="button" onclick="resetMonitoramentoForm()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    Limpar
+                                </button>
+                                <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    Salvar Monitoramento
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">Registros de Monitoramento</h3>
+                            <div class="flex space-x-2">
+                                <select id="monitoramentoFilterEmpreendimento" class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                                    <option value="">Todos Empreendimentos</option>
+                                    <!-- Filled by JavaScript -->
+                                </select>
+                                <select id="monitoramentoFilterTipo" class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                                    <option value="">Todos Tipos</option>
+                                    <option value="Água">Água</option>
+                                    <option value="Solo">Solo</option>
+                                    <option value="Vegetação">Vegetação</option>
+                                    <option value="Ruído">Ruído</option>
+                                    <option value="Ar">Qualidade do Ar</option>
+                                </select>
+                                <input type="text" id="monitoramentoSearch" placeholder="Buscar..." class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                                <button onclick="exportMonitoramento()" class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                    <i class="fas fa-file-export"></i> Exportar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empreendimento</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsável</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="monitoramentoTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Relatórios Tab -->
+            <div id="relatorios" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Relatórios</h2>
+                    <p class="text-gray-600">Geração de relatórios ambientais e administrativos</p>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg mb-6">
+                    <div class="p-4 border-b">
+                        <h3 class="text-lg font-medium text-gray-900">Gerar Novo Relatório</h3>
+                    </div>
+                    <div class="p-4">
+                        <form id="formRelatorio" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="relatorioTipo" class="block text-sm font-medium text-gray-700">Tipo de Relatório *</label>
+                                    <select id="relatorioTipo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                        <option value="">Selecione</option>
+                                        <option value="Fauna">Relatório de Fauna</option>
+                                        <option value="Flora">Relatório de Flora</option>
+                                        <option value="Monitoramento">Relatório de Monitoramento</option>
+                                        <option value="Condicionantes">Relatório de Condicionantes</option>
+                                        <option value="Atividades">Relatório de Atividades</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="relatorioFormato" class="block text-sm font-medium text-gray-700">Formato *</label>
+                                    <select id="relatorioFormato" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500" required>
+                                        <option value="">Selecione</option>
+                                        <option value="PDF">PDF</option>
+                                        <option value="Word">Word</option>
+                                        <option value="Excel">Excel</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="relatorioEmpreendimento" class="block text-sm font-medium text-gray-700">Empreendimento</label>
+                                    <select id="relatorioEmpreendimento" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                        <option value="">Todos</option>
+                                        <!-- Filled by JavaScript -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="relatorioPeriodo" class="block text-sm font-medium text-gray-700">Período</label>
+                                    <select id="relatorioPeriodo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                        <option value="">Personalizado</option>
+                                        <option value="ultimo_mes">Último Mês</option>
+                                        <option value="ultimos_3_meses">Últimos 3 Meses</option>
+                                        <option value="ultimo_ano">Último Ano</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div id="relatorioPeriodoCustom" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="relatorioDataInicio" class="block text-sm font-medium text-gray-700">Data Início</label>
+                                    <input type="date" id="relatorioDataInicio" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                </div>
+                                <div>
+                                    <label for="relatorioDataFim" class="block text-sm font-medium text-gray-700">Data Fim</label>
+                                    <input type="date" id="relatorioDataFim" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label for="relatorioObservacoes" class="block text-sm font-medium text-gray-700">Observações/Instruções</label>
+                                <textarea id="relatorioObservacoes" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500"></textarea>
+                            </div>
+                            
+                            <div class="flex justify-end">
+                                <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    Gerar Relatório
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Relató
+</html>
